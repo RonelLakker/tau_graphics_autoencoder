@@ -1,4 +1,4 @@
-import time
+import datetime
 import torch
 import random
 import torch.nn as nn
@@ -30,7 +30,7 @@ image_size = 256
 batch_size = 128
 
 # Number of training epochs
-num_epochs = 1000
+num_epochs = 20
 
 # Learning rate for optimizers
 lr = 0.0002
@@ -186,7 +186,6 @@ if __name__ == '__main__':
     optimizer = optim.Adam(auto_enc.parameters(), lr=lr, betas=(beta1, 0.999))
 
     # Lists to keep track of progress
-    img_list = []
     losses = []
     iters = 0
 
@@ -195,35 +194,39 @@ if __name__ == '__main__':
     fixed_noise = torch.randn(64, 256, 1, 1, device=device)
 
     print("Starting Training Loop...")
+    # For each epoch
+    for epoch in range(num_epochs):
+        # For each batch in the dataloader
+        for i, data in enumerate(dataloader, 0):
+            auto_enc.zero_grad()
+            # Format batch
+            images = data[0].to(device)
+            b_size = images.size(0)
+            # Forward pass
+            output = auto_enc(images).view(-1)
+            # Calculate loss
+            err = criterion(output, images)
+            # Calculate gradients in backward pass
+            err.backward()
 
-    data = next(iter(dataloader))
+            optimizer.step()
 
-    auto_enc.zero_grad()
-    # Format batch
-    # test case for only one batch on one image
-    data = data[0][0].unsqueeze(0)
-    images = data.to(device)
-    b_size = images.size(0)
+            # Output training stats
+            if i % 50 == 0:
+                print('[%d/%d][%d/%d]\tLoss: %.4f' % (epoch, num_epochs, i, len(dataloader), err.item()))
 
-    # overfit the network on one image, expecting a near perfect results.
-    for epochs in range(num_epochs):
-        # Forward pass
-        output = auto_enc(images)
-        # Calculate loss
-        err = criterion(output, images)
-        # Calculate gradients in backward pass
-        err.backward()
+            # Save Loss for plotting later
+            losses.append(err.item())
 
-        optimizer.step()
+            # Check how the generator is doing by saving G's output on fixed_noise
+            if (iters % 5000 == 0) or ((epoch == num_epochs - 1) and (i == len(dataloader) - 1)):
+                with torch.no_grad():
+                    fake = auto_enc.decode(fixed_noise).detach().cpu()
+                
+                vutils.save_image(fake, fp=f"test_images/image{iters//5000}.png", normalize=True, padding=2)
+                print(f"saved image{iters//5000}.png")
 
-        print('[%d/%d]\tLoss: %.4f' % (epochs, num_epochs, err.item()))
+            iters += 1
 
-        # Save Loss for plotting later
-        losses.append(err.item())
-
-        iters += 1
-
-    output = auto_enc(images)
-    image = output.reshape([3,256,256])
-    vutils.save_image(i, fp="image.png", normalize=True)
-    print(time.time())
+    torch.save(auto_enc.state_dict(), "model.pt")
+    print(datetime.datetime.now())
