@@ -1,3 +1,4 @@
+import time
 import torch
 import random
 import torch.nn as nn
@@ -17,7 +18,7 @@ torch.manual_seed(manualSeed)
 num_workers = 4
 
 # Root directory for dataset
-dataroot = "/home/ML_courses/03683533_2021/ronel_bar"
+dataroot = "/home/ML_courses/03683533_2021/ronel_bar/dataset/"
 
 # Validation size
 validation_size = 1000
@@ -29,7 +30,7 @@ image_size = 256
 batch_size = 128
 
 # Number of training epochs
-num_epochs = 2
+num_epochs = 1000
 
 # Learning rate for optimizers
 lr = 0.0002
@@ -77,7 +78,6 @@ class AutoEncoder(nn.Module):
             # state size is (512) * 4 * 4
 
             nn.Conv2d(512, 256, 4, 1, 0),
-            nn.BatchNorm2d(256),
             nn.ReLU(True),
             # state size is (256) * 1 * 1
 
@@ -102,17 +102,17 @@ class AutoEncoder(nn.Module):
             nn.ReLU(True),
             # state size is (256) * 8 * 8
             
-            nn.ConvTranspose1d(256, 128, 4, 2, 1),
+            nn.ConvTranspose2d(256, 128, 4, 2, 1),
             nn.BatchNorm2d(128),
             nn.ReLU(True),
             # state size is (128) * 16 * 16
             
-            nn.ConvTranspose1d(128, 64, 4, 2, 1),
+            nn.ConvTranspose2d(128, 64, 4, 2, 1),
             nn.BatchNorm2d(64),
             nn.ReLU(True),
             # state size is (64) * 32 * 32
 
-            nn.ConvTranspose1d(64, 32, 4, 2, 1),
+            nn.ConvTranspose2d(64, 32, 4, 2, 1),
             nn.BatchNorm2d(32),
             nn.ReLU(True),
             # state size is (32) * 64 * 64
@@ -128,7 +128,8 @@ class AutoEncoder(nn.Module):
 
     def forward(self, input):
         encoded = self.encoder(input)
-        return self.decoder(encoded)
+        res = self.decoder(encoded.reshape([-1,256,1,1]))
+        return res
 
     def decode(self, input):
         return self.decoder(input)
@@ -148,17 +149,20 @@ def init_data_loader():
                                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
                                ]))
     # Create the dataloader
-    return torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    return torch.utils.data.DataLoader(dataset, batch_size=batch_size, num_workers=num_workers)
 
 
+s = set()
 # custom weights initialization
 def weights_init(m):
     classname = m.__class__.__name__
     if classname.find('BatchNorm') != -1:
         nn.init.normal_(m.weight.data, 1.0, 0.02)
-    else:
+        nn.init.constant_(m.bias.data, 0)
+    elif "Conv" in classname or "Linear" in classname:
         nn.init.normal_(m.weight.data, 0.0, 0.02)
-    nn.init.constant_(m.bias.data, 0)
+        nn.init.constant_(m.bias.data, 0)
+    s.add(classname)
 
 
 if __name__ == '__main__':
@@ -173,6 +177,7 @@ if __name__ == '__main__':
     auto_enc = AutoEncoder().to(device)
 
     auto_enc.apply(weights_init)
+    print(s)
 
     # Initialize BCELoss function (L2)
     criterion = nn.MSELoss()
@@ -190,37 +195,35 @@ if __name__ == '__main__':
     fixed_noise = torch.randn(64, 256, 1, 1, device=device)
 
     print("Starting Training Loop...")
-    # For each epoch
-    for epoch in range(num_epochs):
-        # For each batch in the dataloader
-        for i, data in enumerate(dataloader, 0):
 
-            auto_enc.zero_grad()
-            # Format batch
-            images = data[0].to(device)
-            b_size = images.size(0)
-            # Forward pass
-            output = auto_enc(images).view(-1)
-            # Calculate loss
-            err = criterion(output, images)
-            # Calculate gradients in backward pass
-            err.backward()
+    data = next(iter(dataloader))
 
-            optimizer.step()
+    auto_enc.zero_grad()
+    # Format batch
+    # test case for only one batch on one image
+    data = data[0][0].unsqueeze(0)
+    images = data.to(device)
+    b_size = images.size(0)
 
-            # Output training stats
-            if i % 50 == 0:
-                print('[%d/%d][%d/%d]\tLoss: %.4f' % (epoch, num_epochs, i, len(dataloader), err.item()))
+    # overfit the network on one image, expecting a near perfect results.
+    for epochs in range(num_epochs):
+        # Forward pass
+        output = auto_enc(images)
+        # Calculate loss
+        err = criterion(output, images)
+        # Calculate gradients in backward pass
+        err.backward()
 
-            # Save Loss for plotting later
-            losses.append(err.item())
+        optimizer.step()
 
-            # Check how the generator is doing by saving G's output on fixed_noise
-            if (iters % 500 == 0) or ((epoch == num_epochs - 1) and (i == len(dataloader) - 1)):
-                with torch.no_grad():
-                    fake = auto_enc.decode(fixed_noise).detach().cpu()
-                img_list.append(vutils.make_grid(fake, padding=2, normalize=True))
+        print('[%d/%d]\tLoss: %.4f' % (epochs, num_epochs, err.item()))
 
-            iters += 1
+        # Save Loss for plotting later
+        losses.append(err.item())
 
+        iters += 1
 
+    output = auto_enc(images)
+    image = output.reshape([3,256,256])
+    vutils.save_image(i, fp="image.png", normalize=True)
+    print(time.time())
