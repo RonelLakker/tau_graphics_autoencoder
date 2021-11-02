@@ -30,7 +30,7 @@ image_size = 256
 batch_size = 128
 
 # Number of training epochs
-num_epochs = 2
+num_epochs = 10
 
 # Learning rate for optimizers
 lr = 0.0002
@@ -149,7 +149,7 @@ def init_data_loader():
                                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
                                ]))
     # Create the dataloader
-    return torch.utils.data.DataLoader(dataset, batch_size=batch_size, num_workers=num_workers)
+    return torch.utils.data.DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, pin_memory=True)
 
 
 s = set()
@@ -192,18 +192,22 @@ if __name__ == '__main__':
     # Create batch of latent vectors that we will use to visualize
     #  the progression of the generator
     fixed_noise = torch.randn(64, 256, 1, 1, device=device)
+    validation_images = next(iter(dataloader))[0]
+    validation_images_gpu = next(iter(dataloader))[0].to(device)
 
     print("Starting Training Loop...")
     # For each epoch
     for epoch in range(num_epochs):
         # For each batch in the dataloader
         for i, data in enumerate(dataloader, 0):
+            if i == 0:
+                continue
             auto_enc.zero_grad()
             # Format batch
             images = data[0].to(device)
             b_size = images.size(0)
             # Forward pass
-            output = auto_enc(images).view(-1)
+            output = auto_enc(images)
             # Calculate loss
             err = criterion(output, images)
             # Calculate gradients in backward pass
@@ -219,12 +223,16 @@ if __name__ == '__main__':
             losses.append(err.item())
 
             # Check how the generator is doing by saving G's output on fixed_noise
-            if (iters % 5000 == 0) or ((epoch == num_epochs - 1) and (i == len(dataloader) - 1)):
-                with torch.no_grad():
-                    fake = auto_enc.decode(fixed_noise).detach().cpu()
-                
-                vutils.save_image(fake, fp=f"test_images/image{iters//5000}.png", normalize=True, padding=2)
-                print(f"saved image{iters//5000}.png")
+            freq = num_epochs * 12
+            if (iters % freq == 0) or ((epoch == num_epochs - 1) and (i == len(dataloader) - 1)):
+                for j in range(validation_images.size(0)//32):
+                    test_samples = validation_images_gpu[j*32:j*32+32]
+                    with torch.no_grad():
+                        output_samples = auto_enc(test_samples).detach().cpu()
+                    results = torch.cat((validation_images[j*32:j*32+32], output_samples))
+                    
+                    vutils.save_image(results, fp=f"test_images/image{iters//freq}.{j}.png", normalize=True, padding=2)
+                    print(f"saved image{iters//freq}.png")
 
             iters += 1
 
