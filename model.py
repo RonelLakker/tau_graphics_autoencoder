@@ -23,9 +23,9 @@ models = iter([
      'biases': False,
      'stride': 2,
      'batch_size': 128,
-     'activation_Enc': nn.LeakyReLU,
-     'activation_Dec': nn.ReLU,
-     'optimizer': optim.Adam,
+     'activation_Enc': lambda: nn.LeakyReLU(0.02),
+     'activation_Dec': lambda: nn.ReLU(True),
+     'optimizer': lambda parameters: optim.Adam(parameters, lr=lr, betas=(beta1, 0.999)),
      'fc_layers': 0},
 
     # M2:
@@ -34,20 +34,20 @@ models = iter([
      'biases': False,
      'stride': 2,
      'batch_size': 128,
-     'activation_Enc': nn.LeakyReLU,
-     'activation_Dec': nn.LeakyReLU,
-     'optimizer': optim.Adam,
+     'activation_Enc': lambda: nn.LeakyReLU(0.02),
+     'activation_Dec': lambda: nn.LeakyReLU(0.02),
+     'optimizer': lambda parameters: optim.Adam(parameters, lr=lr, betas=(beta1, 0.999)),
      'fc_layers': 0},
 
     # M3:
     {'loss': nn.MSELoss,
-     'batch_norm': True,
-     'biases': False,
+     'batch_norm': False,
+     'biases': True,
      'stride': 4,
      'batch_size': 128,
-     'activation_Enc': nn.LeakyReLU,
-     'activation_Dec': nn.ReLU,
-     'optimizer': optim.Adam,
+     'activation_Enc': lambda: nn.LeakyReLU(0.02),
+     'activation_Dec': lambda: nn.ReLU(True),
+     'optimizer': lambda parameters: optim.Adam(parameters, lr=lr, betas=(beta1, 0.999)),
      'fc_layers': 0},
 
     # M4:
@@ -55,10 +55,10 @@ models = iter([
      'batch_norm': False,
      'biases': False,
      'stride': 2,
-     'batch_size': 2,
-     'activation_Enc': nn.LeakyReLU,
-     'activation_Dec': nn.ReLU,
-     'optimizer': optim.Adam,
+     'batch_size': 16,
+     'activation_Enc': lambda: nn.LeakyReLU(0.02),
+     'activation_Dec': lambda: nn.ReLU(True),
+     'optimizer': lambda parameters: optim.Adam(parameters, lr=lr, betas=(beta1, 0.999)),
      'fc_layers': 0},
 
     # M5:
@@ -67,9 +67,64 @@ models = iter([
      'biases': False,
      'stride': 2,
      'batch_size': 64,
-     'activation_Enc': nn.LeakyReLU,
-     'activation_Dec': nn.ReLU,
-     'optimizer': optim.Adam,
+     'activation_Enc': lambda: nn.LeakyReLU(0.02),
+     'activation_Dec': lambda: nn.ReLU(True),
+     'optimizer': lambda parameters: optim.Adam(parameters, lr=lr, betas=(beta1, 0.999)),
+     'fc_layers': 0},
+
+    # M6:
+    {'loss': nn.MSELoss,
+     'batch_norm': True,
+     'biases': False,
+     'stride': 2,
+     'batch_size': 64,
+     'activation_Enc': lambda: nn.LeakyReLU(0.02),
+     'activation_Dec': lambda: nn.LeakyReLU(0.02),
+     'optimizer': lambda parameters: optim.Adam(parameters, lr=lr, betas=(beta1, 0.999)),
+     'fc_layers': 0},
+
+    # M7:
+    {'loss': nn.MSELoss,
+     'batch_norm': True,
+     'biases': False,
+     'stride': 2,
+     'batch_size': 128,
+     'activation_Enc': lambda: nn.LeakyReLU(0.02),
+     'activation_Dec': lambda: nn.ReLU(True),
+     'optimizer': lambda parameters: optim.Adam(parameters, lr=lr, betas=(beta1, 0.999)),
+     'fc_layers': 1},
+
+    # M8:
+    {'loss': nn.Sigmoid,
+     'batch_norm': True,
+     'biases': False,
+     'stride': 2,
+     'batch_size': 128,
+     'activation_Enc': lambda: nn.LeakyReLU(0.02),
+     'activation_Dec': lambda: nn.ReLU(True),
+     'optimizer': lambda parameters: optim.SGD(parameters, lr=lr),
+     'fc_layers': 0},
+
+    # M9
+    {'loss': nn.MSELoss,
+     'batch_norm': False,
+     'biases': False,
+     'stride': 2,
+     'batch_size': 128,
+     'activation_Enc': lambda: nn.LeakyReLU(0.02),
+     'activation_Dec': lambda: nn.ReLU(True),
+     'optimizer': lambda parameters: optim.Adam(parameters, lr=lr, betas=(beta1, 0.999)),
+     'fc_layers': 0},
+
+    # M10:
+    {'loss': nn.MSELoss,
+     'batch_norm': True,
+     'biases': False,
+     'stride': 2,
+     'batch_size': 128,
+     'activation_Enc': lambda: nn.LeakyReLU(0.02),
+     'activation_Dec': lambda: nn.ReLU(True),
+     'optimizer': lambda parameters: optim.Adam(parameters, lr=0.0001, betas=(beta1, 0.999)),
      'fc_layers': 0},
 ])
 
@@ -92,7 +147,7 @@ image_size = 256
 
 # Number of training epochs
 
-num_epochs = 2 # TODO: change to 50 
+num_epochs = 50 #2
 
 # Learning rate for optimizers
 lr = 0.0002
@@ -118,36 +173,36 @@ class AutoEncoder(nn.Module):
             # starting with the 2d image tensor
             nn.Conv2d(3, 16, 4, 2, 1, bias=self.hyper_params['biases']),
             nn.BatchNorm2d(16) if self.hyper_params['batch_norm'] else nn.Identity(),
-            self.enc_active(True),
+            self.enc_active(),
             # state size is (16) * 128 * 128
 
             nn.Conv2d(16, 32, 4, 2, 1, bias=self.hyper_params['biases']),
             nn.BatchNorm2d(32) if self.hyper_params['batch_norm'] else nn.Identity(),
-            self.enc_active(True),
+            self.enc_active(),
             # state size is (32) * 64 * 64
 
             nn.Conv2d(32, 64, 4, 2, 1, bias=self.hyper_params['biases']),
             nn.BatchNorm2d(64) if self.hyper_params['batch_norm'] else nn.Identity(),
-            self.enc_active(True),
+            self.enc_active(),
             # state size is (64) * 32 * 32
 
             nn.Conv2d(64, 128, 4, 2, 1, bias=self.hyper_params['biases']),
             nn.BatchNorm2d(128) if self.hyper_params['batch_norm'] else nn.Identity(),
-            self.enc_active(True),
+            self.enc_active(),
             # state size is (128) * 16 * 16
 
             nn.Conv2d(128, 256, 4, 2, 1, bias=self.hyper_params['biases']),
             nn.BatchNorm2d(256) if self.hyper_params['batch_norm'] else nn.Identity(),
-            self.enc_active(True),
+            self.enc_active(),
             # state size is (256) * 8 * 8
 
             nn.Conv2d(256, 512, 4, 2, 1, bias=self.hyper_params['biases']),
             nn.BatchNorm2d(512) if self.hyper_params['batch_norm'] else nn.Identity(),
-            self.enc_active(True),
+            self.enc_active(),
             # state size is (512) * 4 * 4
 
             nn.Conv2d(512, 256, 4, 1, 0, bias=self.hyper_params['biases']),
-            self.enc_active(True),
+            self.enc_active(),
             # state size is (256) * 1 * 1
 
             nn.Flatten(),
@@ -196,6 +251,7 @@ class AutoEncoder(nn.Module):
 
     def forward(self, input):
         encoded = self.fully_connected(self.encoder(input))
+        # torch.save(encoded.reshape([-1,256,1,1])[0], "ronel_encoded.pt")
         res = self.decoder(encoded.reshape([-1,256,1,1]))
         return res
 
@@ -261,7 +317,7 @@ if __name__ == '__main__':
         criterion = hyper_params['loss']()
 
         # Setup Adam optimizer
-        optimizer = hyper_params['optimizer'](auto_enc.parameters(), lr=lr, betas=(beta1, 0.999))
+        optimizer = hyper_params['optimizer'](auto_enc.parameters())
 
         # Lists to keep track of progress
         losses = []
@@ -318,9 +374,39 @@ if __name__ == '__main__':
 
                 # iters += 1
 
+        ### evaluation
+        validation_losses = []
+
+        auto_enc.eval()
+        test_samples = validation_images_gpu[0:32]
+        with torch.no_grad():
+            output_samples = auto_enc(test_samples).detach().cpu()
+        results = torch.cat((validation_images[0:32], output_samples))
+
+        vutils.save_image(results, fp=f"test_images/image_model{model_index}.png", normalize=True, padding=2)
+        log(f"saved model test image")
+
+        with torch.no_grad():
+            for i, data in enumerate(dataloader, 0):
+                if i >= validation_size / hyper_params['batch_size']:
+                    break
+                # Format batch
+                images = data[0].to(device)
+                b_size = images.size(0)
+                # Forward pass
+                output = auto_enc(images)
+                # Calculate loss
+                err = criterion(output, images)
+
+                # Save Loss for plotting later
+                validation_losses.append(err.item())
+
+        auto_enc.train()
+
         torch.save(auto_enc_data.state_dict(), f"model{model_index}.{start_time}.pt")
         log(f"saved model as: 'model{model_index}.{start_time}.pt'")
         open(f"model{model_index}_losses{start_time}.data", "w").write(json.dumps(losses))
+        open(f"model{model_index}_validation_losses{start_time}.data", "w").write(json.dumps(validation_losses))
 
         end_date = datetime.datetime.now()
         log(f"finished model{model_index} in {end_date - start_date}")

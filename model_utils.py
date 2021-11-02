@@ -86,7 +86,6 @@ def forward_image_from_path(image_path, output_image_path, model_path):
         m.load_state_dict(torch.load(model_path, map_location=torch.device("cpu")))
         m.eval()
         tensor_img = load_image_as_tensor(image_path)
-
         output_image = m(tensor_img.unsqueeze(0))
 
         vutils.save_image(torch.cat((tensor_img.unsqueeze(0),output_image)), fp=output_image_path, normalize=True, padding=2)
@@ -98,7 +97,26 @@ def forward_random_latent_vectors(output_path, model_path):
         m.load_state_dict(torch.load(model_path, map_location=torch.device("cpu")))
         m.eval()
 
-        fixed_noise = torch.randn(64, 256, 1, 1, device='cpu')
+        encoded = torch.load("bar_encoded.pt", map_location=torch.device("cpu"))
+
+        fixed_noise = torch.normal(0, 10, size=[64, 256, 1, 1], device='cpu')
+        fixed_noise += encoded
+
+        fake = m.decode(fixed_noise).detach().cpu()
+
+        vutils.save_image(fake, fp=output_path, normalize=True, padding=2)
+
+def interpolate_tensors(t1_path, t2_path, output_path, model_path):
+    with torch.no_grad():
+        m = model.AutoEncoder()
+        m.load_state_dict(torch.load(model_path, map_location=torch.device("cpu")))
+        m.eval()
+
+        encoded1 = torch.load(t1_path, map_location=torch.device("cpu"))
+        encoded2 = torch.load(t2_path, map_location=torch.device("cpu"))
+
+        fixed_noise = torch.normal(0, 5, size=[64, 256, 1, 1], device='cpu')
+        fixed_noise += (encoded1 + encoded2) / 2
 
         fake = m.decode(fixed_noise).detach().cpu()
 
@@ -106,10 +124,10 @@ def forward_random_latent_vectors(output_path, model_path):
 
 
 if __name__ == '__main__':
-    # forward_image_from_path("bar.jpeg","bar_output.png","model1635860295.2771986.pt")
-    # forward_image_from_path("ronel.jpeg","ronel_output.png","model1635860295.2771986.pt")
+    # forward_image_from_path("bar.jpeg", "bar_output.png", "./model0.2021-11-02_22_44_43.pt")
+    forward_image_from_path("ronel.jpeg","ronel_output.png","./model0.2021-11-02_22_44_43.pt")
     # forward_image_from_path("00000.png","00000out.png","model.pt")
-    #forward_random_latent_vectors("rand_gen_27.png", "model1635860295.2771986.pt")
-    for j in range(5):
-        show_losses([f"model{i}_losses2021-11-02_18_45_53.data" for i in [j]], labels=[f"model{i}" for i in [j]])
+    # forward_random_latent_vectors("rand_gen_22_44_43.png", "./model0.2021-11-02_22_44_43.pt")
+    interpolate_tensors("ronel_encoded.pt", "bar_encoded.pt", "rand_gen_22_44_43.png", "./model0.2021-11-02_22_44_43.pt")
+    # show_losses(["model0_losses2021-11-02_22:44:43.data"], labels=[f"model{i}" for i in [0]])
 
