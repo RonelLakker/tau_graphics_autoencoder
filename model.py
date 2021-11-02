@@ -16,7 +16,7 @@ torch.manual_seed(manualSeed)
 
 # constants:
 
-models = [
+models = iter([
     # M1:
     {'loss': nn.MSELoss,
      'batch_norm': True,
@@ -71,7 +71,9 @@ models = [
      'activation_Dec': nn.ReLU,
      'optimizer': optim.Adam,
      'fc_layers': 0},
-]
+])
+
+hyper_params = next(models)
 
 # Number of workers for dataloader
 num_workers = 4
@@ -102,7 +104,7 @@ ngpu = 5
 
 
 class AutoEncoder(nn.Module):
-    def __init__(self, hyper_params):
+    def __init__(self):
         super(AutoEncoder, self).__init__()
 
         self.hyper_params = hyper_params
@@ -199,6 +201,7 @@ class AutoEncoder(nn.Module):
 
     def decode(self, input):
         return self.decoder(input)
+        # return self.decoder(self.fully_connected(input.reshape([-1,256])).reshape([-1,256,1,1]))
 
 
 def init_data_loader(batch_size):
@@ -242,10 +245,10 @@ if __name__ == '__main__':
         log("working on CPU!")
         device = torch.device("cpu")
 
-    for hypers in models:
-        auto_enc_data = AutoEncoder(hypers).to(device)
+    while hyper_params is not None:
+        auto_enc_data = AutoEncoder(hyper_params).to(device)
 
-        dataloader = init_data_loader(hypers['batch_size'])
+        dataloader = init_data_loader(hyper_params['batch_size'])
 
         auto_enc = nn.DataParallel(auto_enc_data, list(range(ngpu)))
 
@@ -253,10 +256,10 @@ if __name__ == '__main__':
         log(s)
 
         # Initialize loss function
-        criterion = hypers['loss']
+        criterion = hyper_params['loss']
 
         # Setup Adam optimizer
-        optimizer = hypers['optimizer'](auto_enc.parameters(), lr=lr, betas=(beta1, 0.999))
+        optimizer = hyper_params['optimizer'](auto_enc.parameters(), lr=lr, betas=(beta1, 0.999))
 
         # Lists to keep track of progress
         losses = []
@@ -274,7 +277,7 @@ if __name__ == '__main__':
         for epoch in range(num_epochs):
             # For each batch in the dataloader
             for i, data in enumerate(dataloader, 0):
-                if i < validation_size / hypers['batch_size']:
+                if i < validation_size / hyper_params['batch_size']:
                     continue
                 auto_enc.zero_grad()
                 # Format batch
@@ -316,6 +319,9 @@ if __name__ == '__main__':
         torch.save(auto_enc_data.state_dict(), f"model{start_time}.pt")
         log(f"saved model as: 'model{start_time}.pt'")
         open(f"model_losses{start_time}.data", "w").write(json.dumps(losses))
+
+        hyper_params = next(models)
+
     end_date = datetime.datetime.now()
     log(f"finished in {end_date - start_date}")
     f.close()

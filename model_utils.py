@@ -85,14 +85,14 @@ def forward_random_latent_vectors(output_path, model_path):
 
         fixed_noise = torch.randn(64, 256, 1, 1, device='cpu')
 
-        fake = m.maybe_better_decode(fixed_noise).detach().cpu()
+        fake = m.decode(fixed_noise).detach().cpu()
 
         vutils.save_image(fake, fp=output_path, normalize=True, padding=2)
 
 
 if __name__ == '__main__':
-    # forward_image_from_path("bar.jpeg","bar_output.png","model.pt")
-    # forward_image_from_path("ronel.jpeg","ronel_output.png","model.pt")
+    # forward_image_from_path("bar.jpeg","bar_output.png","model1635860295.2771986.pt")
+    forward_image_from_path("ronel.jpeg","ronel_output.png","model1635860295.2771986.pt")
     # forward_image_from_path("00000.png","00000out.png","model.pt")
-    forward_random_latent_vectors("maybe_random_generate.2.25.png", "model.1635821666.2835324.25.pt")
+    #forward_random_latent_vectors("rand_gen_27.png", "model1635860295.2771986.pt")
 
