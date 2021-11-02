@@ -217,32 +217,32 @@ class AutoEncoder(nn.Module):
         self.decoder = nn.Sequential(
             nn.ConvTranspose2d(256, 512, 4, 1, 0, bias=self.hyper_params['biases']),
             nn.BatchNorm2d(512) if self.hyper_params['batch_norm'] else nn.Identity(),
-            self.dec_active(True),
+            self.dec_active(),
             # state size is (512) * 4 * 4
             
             nn.ConvTranspose2d(512, 256, 4, 2, 1, bias=self.hyper_params['biases']),
             nn.BatchNorm2d(256) if self.hyper_params['batch_norm'] else nn.Identity(),
-            self.dec_active(True),
+            self.dec_active(),
             # state size is (256) * 8 * 8
             
             nn.ConvTranspose2d(256, 128, 4, 2, 1, bias=self.hyper_params['biases']),
             nn.BatchNorm2d(128) if self.hyper_params['batch_norm'] else nn.Identity(),
-            self.dec_active(True),
+            self.dec_active(),
             # state size is (128) * 16 * 16
             
             nn.ConvTranspose2d(128, 64, 4, 2, 1, bias=self.hyper_params['biases']),
             nn.BatchNorm2d(64) if self.hyper_params['batch_norm'] else nn.Identity(),
-            self.dec_active(True),
+            self.dec_active(),
             # state size is (64) * 32 * 32
 
             nn.ConvTranspose2d(64, 32, 4, 2, 1, bias=self.hyper_params['biases']),
             nn.BatchNorm2d(32) if self.hyper_params['batch_norm'] else nn.Identity(),
-            self.dec_active(True),
+            self.dec_active(),
             # state size is (32) * 64 * 64
 
             nn.ConvTranspose2d(32, 16, 4, 2, 1, bias=self.hyper_params['biases']),
             nn.BatchNorm2d(16) if self.hyper_params['batch_norm'] else nn.Identity(),
-            self.dec_active(True),
+            self.dec_active(),
             # state size is (16) * 128 * 128
             
             nn.ConvTranspose2d(16, 3, 4, 2, 1, bias=self.hyper_params['biases']),
