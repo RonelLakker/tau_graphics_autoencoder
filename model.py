@@ -92,7 +92,7 @@ image_size = 256
 
 # Number of training epochs
 
-num_epochs = 50
+num_epochs = 5
 
 # Learning rate for optimizers
 lr = 0.0002
@@ -248,7 +248,7 @@ if __name__ == '__main__':
     while hyper_params is not None:
         model_index = 1
 
-        auto_enc_data = AutoEncoder(hyper_params).to(device)
+        auto_enc_data = AutoEncoder().to(device)
 
         dataloader = init_data_loader(hyper_params['batch_size'])
 
@@ -258,7 +258,7 @@ if __name__ == '__main__':
         log(s)
 
         # Initialize loss function
-        criterion = hyper_params['loss']
+        criterion = hyper_params['loss']()
 
         # Setup Adam optimizer
         optimizer = hyper_params['optimizer'](auto_enc.parameters(), lr=lr, betas=(beta1, 0.999))
