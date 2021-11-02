@@ -134,6 +134,17 @@ class AutoEncoder(nn.Module):
     def decode(self, input):
         return self.decoder(input)
 
+    def maybe_better_decode(self, input):
+        #
+        # return self.decoder(
+        #     list(self.encoder.children())[-4](
+        #     list(self.encoder.children())[-3](
+        #     list(self.encoder.children())[-2](
+        #     list(self.encoder.children())[-1]((
+        #                     input.reshape([-1,256]))
+        #     ))))
+        #         .reshape([-1,256,1,1]))
+
 
 def init_data_loader():
     # We can use an image folder dataset the way we have it setup.
