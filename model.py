@@ -246,6 +246,8 @@ if __name__ == '__main__':
         device = torch.device("cpu")
 
     while hyper_params is not None:
+        model_index = 1
+
         auto_enc_data = AutoEncoder(hyper_params).to(device)
 
         dataloader = init_data_loader(hyper_params['batch_size'])
@@ -316,12 +318,14 @@ if __name__ == '__main__':
 
                 # iters += 1
 
-        torch.save(auto_enc_data.state_dict(), f"model{start_time}.pt")
-        log(f"saved model as: 'model{start_time}.pt'")
-        open(f"model_losses{start_time}.data", "w").write(json.dumps(losses))
+        torch.save(auto_enc_data.state_dict(), f"model{model_index}.{start_time}.pt")
+        log(f"saved model as: 'model{model_index}.{start_time}.pt'")
+        open(f"model{model_index}_losses{start_time}.data", "w").write(json.dumps(losses))
+
+        end_date = datetime.datetime.now()
+        log(f"finished model{model_index} in {end_date - start_date}")
 
         hyper_params = next(models)
+        model_index += 1
 
-    end_date = datetime.datetime.now()
-    log(f"finished in {end_date - start_date}")
     f.close()
