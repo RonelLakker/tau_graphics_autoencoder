@@ -26,7 +26,7 @@ models = iter([
      'activation_Enc': nn.LeakyReLU,
      'activation_Dec': nn.ReLU,
      'optimizer': optim.Adam,
-     'fc_layers': 2},
+     'fc_layers': 0},
 
     # M2:
     {'loss': nn.L1Loss,
@@ -37,7 +37,7 @@ models = iter([
      'activation_Enc': nn.LeakyReLU,
      'activation_Dec': nn.LeakyReLU,
      'optimizer': optim.Adam,
-     'fc_layers': 2},
+     'fc_layers': 0},
 
     # M3:
     {'loss': nn.MSELoss,
@@ -48,7 +48,7 @@ models = iter([
      'activation_Enc': nn.LeakyReLU,
      'activation_Dec': nn.ReLU,
      'optimizer': optim.Adam,
-     'fc_layers': 2},
+     'fc_layers': 0},
 
     # M4:
     {'loss': nn.MSELoss,
@@ -92,7 +92,7 @@ image_size = 256
 
 # Number of training epochs
 
-num_epochs = 5
+num_epochs = 2 # TODO: change to 50 
 
 # Learning rate for optimizers
 lr = 0.0002
@@ -244,10 +244,10 @@ if __name__ == '__main__':
     else:
         log("working on CPU!")
         device = torch.device("cpu")
-
+    
+    model_index = 0
+    
     while hyper_params is not None:
-        model_index = 1
-
         auto_enc_data = AutoEncoder().to(device)
 
         dataloader = init_data_loader(hyper_params['batch_size'])
