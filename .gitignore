@@ -1,3 +1,6 @@
 .idea/**/*
 *.png
-
+*.pt
+*.err
+*.out
+*.slurm

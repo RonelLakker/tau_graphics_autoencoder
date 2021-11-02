@@ -1,4 +1,5 @@
 import datetime
+import time
 import torch
 import random
 import torch.nn as nn
@@ -30,7 +31,7 @@ image_size = 256
 batch_size = 128
 
 # Number of training epochs
-num_epochs = 10
+num_epochs = 150
 
 # Learning rate for optimizers
 lr = 0.0002
@@ -188,6 +189,7 @@ if __name__ == '__main__':
     # Lists to keep track of progress
     losses = []
     iters = 0
+    start_time = time.time()
 
     # Create batch of latent vectors that we will use to visualize
     #  the progression of the generator
@@ -200,7 +202,7 @@ if __name__ == '__main__':
     for epoch in range(num_epochs):
         # For each batch in the dataloader
         for i, data in enumerate(dataloader, 0):
-            if i == 0:
+            if i<8:
                 continue
             auto_enc.zero_grad()
             # Format batch
@@ -216,7 +218,7 @@ if __name__ == '__main__':
             optimizer.step()
 
             # Output training stats
-            if i % 50 == 0:
+            if i % 100 == 0:
                 print('[%d/%d][%d/%d]\tLoss: %.4f' % (epoch, num_epochs, i, len(dataloader), err.item()))
 
             # Save Loss for plotting later
@@ -225,14 +227,17 @@ if __name__ == '__main__':
             # Check how the generator is doing by saving G's output on fixed_noise
             freq = num_epochs * 12
             if (iters % freq == 0) or ((epoch == num_epochs - 1) and (i == len(dataloader) - 1)):
+                auto_enc.eval()
                 for j in range(validation_images.size(0)//32):
                     test_samples = validation_images_gpu[j*32:j*32+32]
                     with torch.no_grad():
                         output_samples = auto_enc(test_samples).detach().cpu()
                     results = torch.cat((validation_images[j*32:j*32+32], output_samples))
                     
-                    vutils.save_image(results, fp=f"test_images/image{iters//freq}.{j}.png", normalize=True, padding=2)
-                    print(f"saved image{iters//freq}.png")
+                    vutils.save_image(results, fp=f"test_images/image{start_time}.{iters//freq}.{j}.png", normalize=True, padding=2)
+                    print(f"saved image{start_time}.{iters//freq}.{j}.png")
+                auto_enc.train()
+                torch.save(auto_enc.state_dict(), f"model.{start_time}.{iters//freq}.pt")
 
             iters += 1
 
