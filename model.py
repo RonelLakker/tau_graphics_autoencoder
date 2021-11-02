@@ -1,3 +1,4 @@
+import json
 import datetime
 import time
 import torch
@@ -9,7 +10,7 @@ import torchvision.transforms as transforms
 import torch.optim as optim
 import torchvision.utils as vutils
 
-manualSeed = 999
+manualSeed = 1000
 random.seed(manualSeed)
 torch.manual_seed(manualSeed)
 
@@ -31,13 +32,15 @@ image_size = 256
 batch_size = 128
 
 # Number of training epochs
-num_epochs = 150
+num_epochs = 10
 
 # Learning rate for optimizers
 lr = 0.0002
 
 # Beta1 hyperparam for Adam optimizers
 beta1 = 0.5
+
+ngpu = 5
 
 
 class AutoEncoder(nn.Module):
@@ -48,103 +51,94 @@ class AutoEncoder(nn.Module):
             # # # Encoder
             
             # starting with the 2d image tensor
-            nn.Conv2d(3, 16, 4, 2, 1),
+            nn.Conv2d(3, 16, 4, 2, 1, bias=False),
             nn.BatchNorm2d(16),
-            nn.ReLU(True),
+            nn.LeakyReLU(True),
             # state size is (16) * 128 * 128
 
-            nn.Conv2d(16, 32, 4, 2, 1),
+            nn.Conv2d(16, 32, 4, 2, 1, bias=False),
             nn.BatchNorm2d(32),
-            nn.ReLU(True),
+            nn.LeakyReLU(True),
             # state size is (32) * 64 * 64
 
-            nn.Conv2d(32, 64, 4, 2, 1),
+            nn.Conv2d(32, 64, 4, 2, 1, bias=False),
             nn.BatchNorm2d(64),
-            nn.ReLU(True),
+            nn.LeakyReLU(True),
             # state size is (64) * 32 * 32
 
-            nn.Conv2d(64, 128, 4, 2, 1),
+            nn.Conv2d(64, 128, 4, 2, 1, bias=False),
             nn.BatchNorm2d(128),
-            nn.ReLU(True),
+            nn.LeakyReLU(True),
             # state size is (128) * 16 * 16
 
-            nn.Conv2d(128, 256, 4, 2, 1),
+            nn.Conv2d(128, 256, 4, 2, 1, bias=False),
             nn.BatchNorm2d(256),
-            nn.ReLU(True),
+            nn.LeakyReLU(True),
             # state size is (256) * 8 * 8
 
-            nn.Conv2d(256, 512, 4, 2, 1),
+            nn.Conv2d(256, 512, 4, 2, 1, bias=False),
             nn.BatchNorm2d(512),
-            nn.ReLU(True),
+            nn.LeakyReLU(True),
             # state size is (512) * 4 * 4
 
-            nn.Conv2d(512, 256, 4, 1, 0),
-            nn.ReLU(True),
+            nn.Conv2d(512, 256, 4, 1, 0, bias=False),
+            nn.LeakyReLU(True),
             # state size is (256) * 1 * 1
 
             nn.Flatten(),
             # state size is [256]
+        )
 
+        self.fully_connected = nn.Sequential(
+            # # # Decoder
             nn.Linear(256, 256),
             nn.ReLU(True),
             nn.Linear(256, 256),
+            nn.ReLU(True),
         )
 
         self.decoder = nn.Sequential(
-            # # # Decoder
-
-            nn.ConvTranspose2d(256, 512, 4, 1, 0),
+            nn.ConvTranspose2d(256, 512, 4, 1, 0, bias=False),
             nn.BatchNorm2d(512),
             nn.ReLU(True),
             # state size is (512) * 4 * 4
             
-            nn.ConvTranspose2d(512, 256, 4, 2, 1),
+            nn.ConvTranspose2d(512, 256, 4, 2, 1, bias=False),
             nn.BatchNorm2d(256),
             nn.ReLU(True),
             # state size is (256) * 8 * 8
             
-            nn.ConvTranspose2d(256, 128, 4, 2, 1),
+            nn.ConvTranspose2d(256, 128, 4, 2, 1, bias=False),
             nn.BatchNorm2d(128),
             nn.ReLU(True),
             # state size is (128) * 16 * 16
             
-            nn.ConvTranspose2d(128, 64, 4, 2, 1),
+            nn.ConvTranspose2d(128, 64, 4, 2, 1, bias=False),
             nn.BatchNorm2d(64),
             nn.ReLU(True),
             # state size is (64) * 32 * 32
 
-            nn.ConvTranspose2d(64, 32, 4, 2, 1),
+            nn.ConvTranspose2d(64, 32, 4, 2, 1, bias=False),
             nn.BatchNorm2d(32),
             nn.ReLU(True),
             # state size is (32) * 64 * 64
 
-            nn.ConvTranspose2d(32, 16, 4, 2, 1),
+            nn.ConvTranspose2d(32, 16, 4, 2, 1, bias=False),
             nn.BatchNorm2d(16),
             nn.ReLU(True),
             # state size is (16) * 128 * 128
             
-            nn.ConvTranspose2d(16, 3, 4, 2, 1),
+            nn.ConvTranspose2d(16, 3, 4, 2, 1, bias=False),
             nn.Tanh(),
         )
 
     def forward(self, input):
-        encoded = self.encoder(input)
+        encoded = self.fully_connected(self.encoder(input))
         res = self.decoder(encoded.reshape([-1,256,1,1]))
         return res
 
     def decode(self, input):
         return self.decoder(input)
-
-    def maybe_better_decode(self, input):
-        #
-        # return self.decoder(
-        #     list(self.encoder.children())[-4](
-        #     list(self.encoder.children())[-3](
-        #     list(self.encoder.children())[-2](
-        #     list(self.encoder.children())[-1]((
-        #                     input.reshape([-1,256]))
-        #     ))))
-        #         .reshape([-1,256,1,1]))
 
 
 def init_data_loader():
@@ -173,23 +167,28 @@ def weights_init(m):
         nn.init.constant_(m.bias.data, 0)
     elif "Conv" in classname or "Linear" in classname:
         nn.init.normal_(m.weight.data, 0.0, 0.02)
-        nn.init.constant_(m.bias.data, 0)
     s.add(classname)
 
 
 if __name__ == '__main__':
+    start_time = str(datetime.datetime.now()).replace(" ", "_")[:19]
+    f = open(f"log{start_time}", "a")
+    def log(p):
+        f.write(str(p) + "\n")
+        f.flush()
     if torch.cuda.is_available():
         device = torch.device("cuda:0")
     else:
-        print("working on CPU!")
+        log("working on CPU!")
         device = torch.device("cpu")
 
     dataloader = init_data_loader()
 
-    auto_enc = AutoEncoder().to(device)
+    auto_enc_data = AutoEncoder().to(device)
+    auto_enc = nn.DataParallel(auto_enc_data, list(range(ngpu)))
 
     auto_enc.apply(weights_init)
-    print(s)
+    log(s)
 
     # Initialize BCELoss function (L2)
     criterion = nn.MSELoss()
@@ -200,7 +199,7 @@ if __name__ == '__main__':
     # Lists to keep track of progress
     losses = []
     iters = 0
-    start_time = time.time()
+    start_date = datetime.datetime.now()
 
     # Create batch of latent vectors that we will use to visualize
     #  the progression of the generator
@@ -208,7 +207,7 @@ if __name__ == '__main__':
     validation_images = next(iter(dataloader))[0]
     validation_images_gpu = next(iter(dataloader))[0].to(device)
 
-    print("Starting Training Loop...")
+    log(f"Starting Training Loop... {start_date}")
     # For each epoch
     for epoch in range(num_epochs):
         # For each batch in the dataloader
@@ -229,28 +228,32 @@ if __name__ == '__main__':
             optimizer.step()
 
             # Output training stats
-            if i % 100 == 0:
-                print('[%d/%d][%d/%d]\tLoss: %.4f' % (epoch, num_epochs, i, len(dataloader), err.item()))
+            if i % 50 == 0:
+                log('[%d/%d][%d/%d]\tLoss: %.4f' % (epoch, num_epochs, i, len(dataloader), err.item()))
 
             # Save Loss for plotting later
             losses.append(err.item())
 
-            # Check how the generator is doing by saving G's output on fixed_noise
-            freq = num_epochs * 12
-            if (iters % freq == 0) or ((epoch == num_epochs - 1) and (i == len(dataloader) - 1)):
-                auto_enc.eval()
-                for j in range(validation_images.size(0)//32):
-                    test_samples = validation_images_gpu[j*32:j*32+32]
-                    with torch.no_grad():
-                        output_samples = auto_enc(test_samples).detach().cpu()
-                    results = torch.cat((validation_images[j*32:j*32+32], output_samples))
-                    
-                    vutils.save_image(results, fp=f"test_images/image{start_time}.{iters//freq}.{j}.png", normalize=True, padding=2)
-                    print(f"saved image{start_time}.{iters//freq}.{j}.png")
-                auto_enc.train()
-                torch.save(auto_enc.state_dict(), f"model.{start_time}.{iters//freq}.pt")
+            # # Check how the generator is doing by saving G's output on fixed_noise
+            # freq = num_epochs * 12 * 2
+            # if (iters % freq == 0) or ((epoch == num_epochs - 1) and (i == len(dataloader) - 1)):
+            #     auto_enc.eval()
+            #     for j in range(validation_images.size(0)//32):
+            #         test_samples = validation_images_gpu[j*32:j*32+32]
+            #         with torch.no_grad():
+            #             output_samples = auto_enc(test_samples).detach().cpu()
+            #         results = torch.cat((validation_images[j*32:j*32+32], output_samples))
+            #         
+            #         vutils.save_image(results, fp=f"test_images/image{start_time}.{iters//freq}.{j}.png", normalize=True, padding=2)
+            #         log(f"saved image{start_time}.{iters//freq}.{j}.png")
+            #     auto_enc.train()
+            #     torch.save(auto_enc.state_dict(), f"model.{start_time}.{iters//freq}.pt")
 
-            iters += 1
+            # iters += 1
 
-    torch.save(auto_enc.state_dict(), "model.pt")
-    print(datetime.datetime.now())
+    torch.save(auto_enc_data.state_dict(), f"model{start_time}.pt")
+    log(f"saved model as: 'model{start_time}.pt'")
+    open(f"model_losses{start_time}.data", "w").write(json.dumps(losses))
+    end_date = datetime.datetime.now()
+    log(f"finished in {end_date - start_date}")
+    f.close()
