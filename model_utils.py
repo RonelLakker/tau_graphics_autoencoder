@@ -1,3 +1,5 @@
+import json
+
 import torch
 import torchvision
 import torchvision.transforms as transforms
@@ -50,7 +52,20 @@ def validate_on_dataset(file_pathes, model_path):
         tensor_img = load_image_as_tensor(image_path)
         output_image = m(tensor_img.unsqueeze(0))
         vutils.save_image(torch.cat((tensor_img.unsqueeze(0),output_image)), fp=image_path+"__comparison.png", normalize=True, padding=2)
-    
+
+
+def show_losses(losses_paths, labels=None):
+    if labels is None:
+        labels = ["Loss During Training"]
+    models_losses = [json.loads(open(losses_path, "r").read()) for losses_path in losses_paths]
+    plt.figure(figsize=(10, 5))
+    for label,losses in zip(labels, models_losses):
+        plt.title(label)
+        plt.plot(losses, label="loss")
+    plt.xlabel("iterations")
+    plt.ylabel("Loss")
+    plt.legend()
+    plt.show()
 
 
 def load_image_as_tensor(image_path):
@@ -92,7 +107,9 @@ def forward_random_latent_vectors(output_path, model_path):
 
 if __name__ == '__main__':
     # forward_image_from_path("bar.jpeg","bar_output.png","model1635860295.2771986.pt")
-    forward_image_from_path("ronel.jpeg","ronel_output.png","model1635860295.2771986.pt")
+    # forward_image_from_path("ronel.jpeg","ronel_output.png","model1635860295.2771986.pt")
     # forward_image_from_path("00000.png","00000out.png","model.pt")
     #forward_random_latent_vectors("rand_gen_27.png", "model1635860295.2771986.pt")
+    for j in range(5):
+        show_losses([f"model{i}_losses2021-11-02_18_45_53.data" for i in [j]], labels=[f"model{i}" for i in [j]])
 

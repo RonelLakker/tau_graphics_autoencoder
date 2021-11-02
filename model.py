@@ -324,7 +324,7 @@ if __name__ == '__main__':
 
         end_date = datetime.datetime.now()
         log(f"finished model{model_index} in {end_date - start_date}")
-
+        
         hyper_params = next(models)
         model_index += 1
 
