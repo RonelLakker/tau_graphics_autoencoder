@@ -60,7 +60,7 @@ def show_losses(losses_paths, labels=None, title="Loss During Training"):
     if labels is None:
         labels = [f"model{i}" for i in range(len(losses_paths))]
     models_losses = [json.loads(open(losses_path, "r").read()) for losses_path in losses_paths]
-    models_losses = [[losses[i] for i in range(len(losses)) if i % (1500//(len(losses)**0.001)) == 0] for losses in models_losses]
+    # models_losses = [[losses[i] for i in range(len(losses)) if i % (1500//(len(losses)**0.001)) == 0] for losses in models_losses]
     plt.figure(figsize=(10, 5))
     plt.title(title)
     for label, losses in zip(labels, models_losses):
@@ -146,13 +146,23 @@ def interpolate_tensors(t1_path, t2_path, output_path, model_path, hyper_params=
 if __name__ == '__main__':
     # forward_image_from_path("bar.jpeg", "bar3_output.png", "./model3.2021-11-03_01_59_38.pt", hyper_params=model.models[3])
     # forward_image_from_path("ronel.jpeg","ronel3_output.png","./model3.2021-11-03_01_59_38.pt", hyper_params=model.models[3])
+    # for i in range(7):
+    #     forward_image_from_path("bar.jpeg", f"bar{i}_output.png", f"./model{i}.2021-11-03_01_59_38.pt", hyper_params=model.models[i])
+    #     forward_image_from_path("ronel.jpeg", f"ronel{i}_output.png", f"./model{i}.2021-11-03_01_59_38.pt", hyper_params=model.models[i])
     # forward_image_from_path("00000.png","00000out.png","model.pt")
     # forward_random_latent_vectors("rand_gen_.png", "./model0.2021-11-02_22_44_43.pt")
-    for i in range(7):
-        forward_random_latent_vectors(f"rand_gen_model{i}.png", f"./model{i}.2021-11-03_01_59_38.pt", hyper_params=model.models[i])
+    # for i in range(7):
+    #     forward_random_latent_vectors(f"rand_gen_model{i}.png", f"./model{i}.2021-11-03_01_59_38.pt", hyper_params=model.models[i])
     # interpolate_tensors("ronel_encoded.pt", "bar_encoded.pt", "rand_gen_22_44_43.png", "./model0.2021-11-02_22_44_43.pt")
     # for j in range(7):
     #     show_losses([f"model{i}_losses2021-11-03_01_59_38.data" for i in [j]], labels=[f"model{i}" for i in [j]])
     # show_losses([f"model{i}_losses2021-11-03_01_59_38.data" for i in range(7)], labels=[f"model{i}" for i in range(7)])
     # show_losses([f"model{i}_validation_losses2021-11-03_01_59_38.data" for i in range(7)], labels=[f"model{i}" for i in range(7)], title="Validation Loss")
+
+    losses_paths = [f"model{i}_validation_losses2021-11-03_01_59_38.data" for i in range(7)]
+    models_losses = [json.loads(open(losses_path, "r").read()) for losses_path in losses_paths]
+    models_avgs = [(i,sum(models_losses[i])/len(models_losses[i])) for i in range(7)]
+    models_avgs.sort(key=lambda x: x[1])
+    for i, avg in models_avgs:
+        print(f"model{i}'s validation loss avg: {avg}")
 
