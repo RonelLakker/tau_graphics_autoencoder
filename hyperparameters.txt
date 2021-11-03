@@ -1,0 +1,107 @@
+loss: 					L1 or L2
+pooling layers:			w\ or w\o
+batch normalization:	w\ or w\o
+biases:					w\ or w\o
+strides:				all 2 or all 4
+num_epochs:				2 or 5 or 10 or 60 or 150
+batch_size:				2 or 32 or 128
+activation:				ReLU or Leaky-ReLU
+optimizer:				Adam or SGD
+Linear:					w\ or w\o
+----------------------------------------------------------------------------------
+----------------------------------------------------------------------------------
+M1:
+	loss: 					L2
+	pooling layers:			w\o
+	batch normalization:	w\
+	biases:					w\o
+	strides:				all 2, but the last one which is 1
+	num_epochs:				50
+	batch_size:				128
+	activation:				ReLU && Leaky-ReLU
+	optimizer:				Adam
+	Linear:					w\o
+----------------------------------------------------------------------------------
+M2:
+	loss: 					L1										**!
+	pooling layers:			w\o										
+	batch normalization:	w\										
+	biases:					w\o										
+	strides:				all 2, but the last one which is 1		
+	num_epochs:				50										
+	batch_size:				128										
+	activation:				Leaky-ReLU								**!
+	optimizer:				Adam									
+	Linear:					w\o
+----------------------------------------------------------------------------------
+M3:
+	loss: 					L2										
+	pooling layers:			w\o										
+	batch normalization:	w\o										**!
+	biases:					w\										**!
+	strides:				all	2									
+	num_epochs:				50										
+	batch_size:				128										
+	activation:				ReLU && Leaky-ReLU						
+	optimizer:				Adam										
+	Linear:					w\o
+----------------------------------------------------------------------------------
+M4:
+	loss: 					L2										
+	pooling layers:			w\o										
+	batch normalization:	w\o										**!
+	biases:					w\o										
+	strides:				all 2, but the last one which is 1		
+	num_epochs:				50										
+	batch_size:				16										**!
+	activation:				ReLU && Leaky-ReLU						
+	optimizer:				Adam									
+	Linear:					w\o										
+----------------------------------------------------------------------------------
+M5:
+	loss: 					L2										
+	pooling layers:			w\o										
+	batch normalization:	w										
+	biases:					w\o										
+	strides:				all 2, but the last one which is 1		
+	num_epochs:				50										
+	batch_size:				64										**!
+	activation:				ReLU && Leaky-ReLU						
+	optimizer:				Adam									
+	Linear:					w\o										
+----------------------------------------------------------------------------------
+M6:
+	loss: 					L2
+	pooling layers:			w\o
+	batch normalization:	w\
+	biases:					w\o
+	strides:				all 2, but the last one which is 1
+	num_epochs:				50
+	batch_size:				64
+	activation:				Leaky-ReLU && Leaky-ReLU				**!
+	optimizer:				Adam
+	Linear:					w\o
+----------------------------------------------------------------------------------
+M7:
+	loss: 					L2
+	pooling layers:			w\o
+	batch normalization:	w\
+	biases:					w\o
+	strides:				all 2, but the last one which is 1
+	num_epochs:				50
+	batch_size:				128
+	activation:				ReLU && Leaky-ReLU
+	optimizer:				Adam
+	Linear:					1
+----------------------------------------------------------------------------------
+M8:
+	loss: 					sigmoid
+	pooling layers:			w\o
+	batch normalization:	w\
+	biases:					w\o
+	strides:				all 2, but the last one which is 1
+	num_epochs:				50
+	batch_size:				128
+	activation:				ReLU && Leaky-ReLU
+	optimizer:				SGD
+	Linear:					0
