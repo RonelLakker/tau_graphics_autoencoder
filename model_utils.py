@@ -25,8 +25,9 @@ def init_data_loader(dataroot):
     # Create the dataloader
     return torch.utils.data.DataLoader(dataset, batch_size=8, pin_memory=True)
 
-def validate_first_batch(dataset_path, output_grid_path, model_path):
+def validate_first_batch(dataset_path, output_grid_path, model_path, hyper_params=model.models[0]):
     # Check how the generator is doing by saving G's output on fixed_noise
+    model.hyper_params = hyper_params
     m = model.AutoEncoder()
     m.load_state_dict(torch.load(model_path, map_location=torch.device("cpu")))
     m.eval()
@@ -41,10 +42,11 @@ def validate_first_batch(dataset_path, output_grid_path, model_path):
         vutils.save_image(results, fp=output_grid_path, normalize=True, padding=2)
 
 # forward pass on images in file_pathes, save the comparison result in <original-path-with-ending>_comparison.png
-def validate_on_dataset(file_pathes, model_path):
+def validate_on_dataset(file_pathes, model_path, hyper_params=model.models[0]):
     if len(file_pathes) > 128:
         print("big file path, truncating to 128 samples!")
         file_pathes = file_pathes[:128]
+    model.hyper_params = hyper_params
     m = model.AutoEncoder()
     m.load_state_dict(torch.load(model_path, map_location=torch.device("cpu")))
     m.eval()
@@ -54,16 +56,18 @@ def validate_on_dataset(file_pathes, model_path):
         vutils.save_image(torch.cat((tensor_img.unsqueeze(0),output_image)), fp=image_path+"__comparison.png", normalize=True, padding=2)
 
 
-def show_losses(losses_paths, labels=None):
+def show_losses(losses_paths, labels=None, title="Loss During Training"):
     if labels is None:
-        labels = ["Loss During Training"]
+        labels = [f"model{i}" for i in range(len(losses_paths))]
     models_losses = [json.loads(open(losses_path, "r").read()) for losses_path in losses_paths]
+    models_losses = [[losses[i] for i in range(len(losses)) if i % (1500//(len(losses)**0.001)) == 0] for losses in models_losses]
     plt.figure(figsize=(10, 5))
-    for label,losses in zip(labels, models_losses):
-        plt.title(label)
-        plt.plot(losses, label="loss")
+    plt.title(title)
+    for label, losses in zip(labels, models_losses):
+        plt.plot([i/len(losses) for i in range(len(losses))], losses, label=label)
     plt.xlabel("iterations")
     plt.ylabel("Loss")
+    plt.gca().set_ylim([0, 0.2])
     plt.legend()
     plt.show()
 
@@ -80,8 +84,9 @@ def load_image_as_tensor(image_path):
     return tensor_img
 
 
-def forward_image_from_path(image_path, output_image_path, model_path):
+def forward_image_from_path(image_path, output_image_path, model_path, hyper_params=model.models[0]):
     with torch.no_grad():
+        model.hyper_params = hyper_params
         m = model.AutoEncoder()
         m.load_state_dict(torch.load(model_path, map_location=torch.device("cpu")))
         m.eval()
@@ -91,8 +96,9 @@ def forward_image_from_path(image_path, output_image_path, model_path):
         vutils.save_image(torch.cat((tensor_img.unsqueeze(0),output_image)), fp=output_image_path, normalize=True, padding=2)
 
 
-def forward_random_latent_vectors(output_path, model_path):
+def bar_forward_random_latent_vectors(output_path, model_path, hyper_params=model.models[0]):
     with torch.no_grad():
+        model.hyper_params = hyper_params
         m = model.AutoEncoder()
         m.load_state_dict(torch.load(model_path, map_location=torch.device("cpu")))
         m.eval()
@@ -106,8 +112,22 @@ def forward_random_latent_vectors(output_path, model_path):
 
         vutils.save_image(fake, fp=output_path, normalize=True, padding=2)
 
-def interpolate_tensors(t1_path, t2_path, output_path, model_path):
+def forward_random_latent_vectors(output_path, model_path, hyper_params=model.models[0]):
     with torch.no_grad():
+        model.hyper_params = hyper_params
+        m = model.AutoEncoder()
+        m.load_state_dict(torch.load(model_path, map_location=torch.device("cpu")))
+        m.eval()
+
+        fixed_noise = torch.normal(0, 10, [64, 256, 1, 1], device='cpu')
+
+        fake = m.decode(fixed_noise).detach().cpu()
+
+        vutils.save_image(fake, fp=output_path, normalize=True, padding=2)
+
+def interpolate_tensors(t1_path, t2_path, output_path, model_path, hyper_params=model.models[0]):
+    with torch.no_grad():
+        model.hyper_params = hyper_params
         m = model.AutoEncoder()
         m.load_state_dict(torch.load(model_path, map_location=torch.device("cpu")))
         m.eval()
@@ -124,10 +144,15 @@ def interpolate_tensors(t1_path, t2_path, output_path, model_path):
 
 
 if __name__ == '__main__':
-    # forward_image_from_path("bar.jpeg", "bar_output.png", "./model0.2021-11-02_22_44_43.pt")
-    forward_image_from_path("ronel.jpeg","ronel_output.png","./model0.2021-11-02_22_44_43.pt")
+    # forward_image_from_path("bar.jpeg", "bar3_output.png", "./model3.2021-11-03_01_59_38.pt", hyper_params=model.models[3])
+    # forward_image_from_path("ronel.jpeg","ronel3_output.png","./model3.2021-11-03_01_59_38.pt", hyper_params=model.models[3])
     # forward_image_from_path("00000.png","00000out.png","model.pt")
-    # forward_random_latent_vectors("rand_gen_22_44_43.png", "./model0.2021-11-02_22_44_43.pt")
-    interpolate_tensors("ronel_encoded.pt", "bar_encoded.pt", "rand_gen_22_44_43.png", "./model0.2021-11-02_22_44_43.pt")
-    # show_losses(["model0_losses2021-11-02_22:44:43.data"], labels=[f"model{i}" for i in [0]])
+    # forward_random_latent_vectors("rand_gen_.png", "./model0.2021-11-02_22_44_43.pt")
+    for i in range(7):
+        forward_random_latent_vectors(f"rand_gen_model{i}.png", f"./model{i}.2021-11-03_01_59_38.pt", hyper_params=model.models[i])
+    # interpolate_tensors("ronel_encoded.pt", "bar_encoded.pt", "rand_gen_22_44_43.png", "./model0.2021-11-02_22_44_43.pt")
+    # for j in range(7):
+    #     show_losses([f"model{i}_losses2021-11-03_01_59_38.data" for i in [j]], labels=[f"model{i}" for i in [j]])
+    # show_losses([f"model{i}_losses2021-11-03_01_59_38.data" for i in range(7)], labels=[f"model{i}" for i in range(7)])
+    # show_losses([f"model{i}_validation_losses2021-11-03_01_59_38.data" for i in range(7)], labels=[f"model{i}" for i in range(7)], title="Validation Loss")
 

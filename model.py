@@ -16,7 +16,7 @@ torch.manual_seed(manualSeed)
 
 # constants:
 
-models = iter([
+models = [
     # M1:
     {'loss': nn.MSELoss,
      'batch_norm': True,
@@ -126,9 +126,11 @@ models = iter([
      'activation_Dec': lambda: nn.ReLU(True),
      'optimizer': lambda parameters: optim.Adam(parameters, lr=0.0001, betas=(beta1, 0.999)),
      'fc_layers': 0},
-])
+]
 
-hyper_params = next(models)
+iter_models = iter(models)
+
+hyper_params = next(iter_models)
 
 # Number of workers for dataloader
 num_workers = 4
@@ -411,7 +413,7 @@ if __name__ == '__main__':
         end_date = datetime.datetime.now()
         log(f"finished model{model_index} in {end_date - start_date}")
         
-        hyper_params = next(models)
+        hyper_params = next(iter_models)
         model_index += 1
 
     f.close()
