@@ -95,7 +95,7 @@ models = [
      'fc_layers': 1},
 
     # M8:
-    {'loss': nn.Sigmoid,
+    {'loss': nn.MSELoss,
      'batch_norm': True,
      'biases': False,
      'stride': 2,
@@ -306,110 +306,113 @@ if __name__ == '__main__':
     model_index = 0
     
     while hyper_params is not None:
-        auto_enc_data = AutoEncoder().to(device)
+        try:
+            auto_enc_data = AutoEncoder().to(device)
 
-        dataloader = init_data_loader(hyper_params['batch_size'])
+            dataloader = init_data_loader(hyper_params['batch_size'])
 
-        auto_enc = nn.DataParallel(auto_enc_data, list(range(ngpu)))
+            auto_enc = nn.DataParallel(auto_enc_data, list(range(ngpu)))
 
-        auto_enc.apply(weights_init)
-        log(s)
+            auto_enc.apply(weights_init)
+            log(s)
 
-        # Initialize loss function
-        criterion = hyper_params['loss']()
+            # Initialize loss function
+            criterion = hyper_params['loss']()
 
-        # Setup Adam optimizer
-        optimizer = hyper_params['optimizer'](auto_enc.parameters())
+            # Setup Adam optimizer
+            optimizer = hyper_params['optimizer'](auto_enc.parameters())
 
-        # Lists to keep track of progress
-        losses = []
-        iters = 0
-        start_date = datetime.datetime.now()
+            # Lists to keep track of progress
+            losses = []
+            iters = 0
+            start_date = datetime.datetime.now()
 
-        # Create batch of latent vectors that we will use to visualize
-        #  the progression of the generator
-        fixed_noise = torch.randn(64, 256, 1, 1, device=device)
-        validation_images = next(iter(dataloader))[0]
-        validation_images_gpu = next(iter(dataloader))[0].to(device)
+            # Create batch of latent vectors that we will use to visualize
+            #  the progression of the generator
+            fixed_noise = torch.randn(64, 256, 1, 1, device=device)
+            validation_images = next(iter(dataloader))[0]
+            validation_images_gpu = next(iter(dataloader))[0].to(device)
 
-        log(f"Starting Training Loop... {start_date}")
-        # For each epoch
-        for epoch in range(num_epochs):
-            # For each batch in the dataloader
-            for i, data in enumerate(dataloader, 0):
-                if i < validation_size / hyper_params['batch_size']:
-                    continue
-                auto_enc.zero_grad()
-                # Format batch
-                images = data[0].to(device)
-                b_size = images.size(0)
-                # Forward pass
-                output = auto_enc(images)
-                # Calculate loss
-                err = criterion(output, images)
-                # Calculate gradients in backward pass
-                err.backward()
+            log(f"Starting Training Loop... {start_date}")
+            # For each epoch
+            for epoch in range(num_epochs):
+                # For each batch in the dataloader
+                for i, data in enumerate(dataloader, 0):
+                    if i < validation_size / hyper_params['batch_size']:
+                        continue
+                    auto_enc.zero_grad()
+                    # Format batch
+                    images = data[0].to(device)
+                    b_size = images.size(0)
+                    # Forward pass
+                    output = auto_enc(images)
+                    # Calculate loss
+                    err = criterion(output, images)
+                    # Calculate gradients in backward pass
+                    err.backward()
 
-                optimizer.step()
+                    optimizer.step()
 
-                # Output training stats
-                if i % 50 == 0:
-                    log('[%d/%d][%d/%d]\tLoss: %.4f' % (epoch, num_epochs, i, len(dataloader), err.item()))
+                    # Output training stats
+                    if i % 50 == 0:
+                        log('[%d/%d][%d/%d]\tLoss: %.4f' % (epoch, num_epochs, i, len(dataloader), err.item()))
 
-                # Save Loss for plotting later
-                losses.append(err.item())
+                    # Save Loss for plotting later
+                    losses.append(err.item())
 
-                # # Check how the generator is doing by saving G's output on fixed_noise
-                # freq = num_epochs * 12 * 2
-                # if (iters % freq == 0) or ((epoch == num_epochs - 1) and (i == len(dataloader) - 1)):
-                #     auto_enc.eval()
-                #     for j in range(validation_images.size(0)//32):
-                #         test_samples = validation_images_gpu[j*32:j*32+32]
-                #         with torch.no_grad():
-                #             output_samples = auto_enc(test_samples).detach().cpu()
-                #         results = torch.cat((validation_images[j*32:j*32+32], output_samples))
-                #
-                #         vutils.save_image(results, fp=f"test_images/image{start_time}.{iters//freq}.{j}.png", normalize=True, padding=2)
-                #         log(f"saved image{start_time}.{iters//freq}.{j}.png")
-                #     auto_enc.train()
-                #     torch.save(auto_enc.state_dict(), f"model.{start_time}.{iters//freq}.pt")
+                    # # Check how the generator is doing by saving G's output on fixed_noise
+                    # freq = num_epochs * 12 * 2
+                    # if (iters % freq == 0) or ((epoch == num_epochs - 1) and (i == len(dataloader) - 1)):
+                    #     auto_enc.eval()
+                    #     for j in range(validation_images.size(0)//32):
+                    #         test_samples = validation_images_gpu[j*32:j*32+32]
+                    #         with torch.no_grad():
+                    #             output_samples = auto_enc(test_samples).detach().cpu()
+                    #         results = torch.cat((validation_images[j*32:j*32+32], output_samples))
+                    #
+                    #         vutils.save_image(results, fp=f"test_images/image{start_time}.{iters//freq}.{j}.png", normalize=True, padding=2)
+                    #         log(f"saved image{start_time}.{iters//freq}.{j}.png")
+                    #     auto_enc.train()
+                    #     torch.save(auto_enc.state_dict(), f"model.{start_time}.{iters//freq}.pt")
 
-                # iters += 1
+                    # iters += 1
 
-        ### evaluation
-        validation_losses = []
+            ### evaluation
+            validation_losses = []
 
-        auto_enc.eval()
-        test_samples = validation_images_gpu[0:32]
-        with torch.no_grad():
-            output_samples = auto_enc(test_samples).detach().cpu()
-        results = torch.cat((validation_images[0:32], output_samples))
+            auto_enc.eval()
+            test_samples = validation_images_gpu[0:32]
+            with torch.no_grad():
+                output_samples = auto_enc(test_samples).detach().cpu()
+            results = torch.cat((validation_images[0:32], output_samples))
 
-        vutils.save_image(results, fp=f"test_images/image_model{model_index}.png", normalize=True, padding=2)
-        log(f"saved model test image")
+            vutils.save_image(results, fp=f"test_images/image_model{model_index}.png", normalize=True, padding=2)
+            log(f"saved model test image")
 
-        with torch.no_grad():
-            for i, data in enumerate(dataloader, 0):
-                if i >= validation_size / hyper_params['batch_size']:
-                    break
-                # Format batch
-                images = data[0].to(device)
-                b_size = images.size(0)
-                # Forward pass
-                output = auto_enc(images)
-                # Calculate loss
-                err = criterion(output, images)
+            with torch.no_grad():
+                for i, data in enumerate(dataloader, 0):
+                    if i >= validation_size / hyper_params['batch_size']:
+                        break
+                    # Format batch
+                    images = data[0].to(device)
+                    b_size = images.size(0)
+                    # Forward pass
+                    output = auto_enc(images)
+                    # Calculate loss
+                    err = criterion(output, images)
 
-                # Save Loss for plotting later
-                validation_losses.append(err.item())
+                    # Save Loss for plotting later
+                    validation_losses.append(err.item())
 
-        auto_enc.train()
+            auto_enc.train()
 
-        torch.save(auto_enc_data.state_dict(), f"model{model_index}.{start_time}.pt")
-        log(f"saved model as: 'model{model_index}.{start_time}.pt'")
-        open(f"model{model_index}_losses{start_time}.data", "w").write(json.dumps(losses))
-        open(f"model{model_index}_validation_losses{start_time}.data", "w").write(json.dumps(validation_losses))
-
+            torch.save(auto_enc_data.state_dict(), f"model{model_index}.{start_time}.pt")
+            log(f"saved model as: 'model{model_index}.{start_time}.pt'")
+            open(f"model{model_index}_losses{start_time}.data", "w").write(json.dumps(losses))
+            open(f"model{model_index}_validation_losses{start_time}.data", "w").write(json.dumps(validation_losses))
+        except Exception as e:
+            log(f"Exception in model{model_index}!")
+            log(str(e))
         end_date = datetime.datetime.now()
         log(f"finished model{model_index} in {end_date - start_date}")
         
